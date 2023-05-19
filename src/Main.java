@@ -1,4 +1,5 @@
 import java.util.Arrays;
+import java.util.Random;
 
 public class Main {
 
@@ -7,14 +8,16 @@ public class Main {
             0x299f31d0, 0x082efa98, 0xec4e6c89, 0x452821e6, 0x38d01377,
             0xbe5466cf, 0x34e90c6c, 0xc0ac29b7, 0xc97c50dd, 0x3f84d5b5,
             0xb5470917, 0x9216d5d9, 0x8979fb1b
-
     };
 
+    static int[][] S;
+
     public static void main(String[] args) {
+        S = generateSBox();
         String hi = "Hello world and M I E T!";
-        long[] encr = encryption(hi.getBytes());
-        System.out.println(Arrays.toString(encryption(hi.getBytes())));
-        System.out.println((decoding(encr)).toString());
+        System.out.println(Arrays.toString(hi.getBytes()));
+        long[] encryption = encryption(hi.getBytes());
+        System.out.println(Arrays.toString(decoding(encryption)));
     }
 
     public static long[] divideIntoBlocks(byte[] byteArray) {
@@ -96,6 +99,8 @@ public class Main {
         return arr;
     }
 
+
+
     public static byte[] decoding(long[] arr) {
         for (int i = 0; i < arr.length; i++) {
             long l = arr[i];
@@ -107,37 +112,92 @@ public class Main {
     }
 
     public static int[] backRound(int firstBlock, int secondBlock, int count) {
-        if (count == 17) {
-            firstBlock = xor32Bits(firstBlock, P[17]);
-            secondBlock = xor32Bits(secondBlock, P[16]);
-            firstBlock = xor32Bits(firstBlock, P[15]);
-            secondBlock = xor32Bits(firstBlock, secondBlock);
-            count = 14;
-        }
-        if (count < 15 && count != 0) {
+        while (count >= 1 && count <= 15) {
             secondBlock = xor32Bits(secondBlock, P[14]);
-            firstBlock = xor32Bits(firstBlock, secondBlock);
-            count = count - 1;
-            round(firstBlock, secondBlock, count);
+            firstBlock = xor32Bits(firstBlock, F(secondBlock));
+            count--;
         }
         if (count == 0) {
             firstBlock = xor32Bits(firstBlock, P[0]);
-            secondBlock = xor32Bits(firstBlock, secondBlock);
+            secondBlock = xor32Bits(F(firstBlock), secondBlock);
         }
-        return new int[]{firstBlock, secondBlock};
-    }
-
-    public static int[] round(int firstBlock, int secondBlock, int count) {
-        if (count < 15) {
-            firstBlock = xor32Bits(firstBlock, P[count]);
-            secondBlock = xor32Bits(firstBlock, secondBlock);
-            count = count + 1;
-            round(secondBlock, firstBlock, count);
-        }
-        firstBlock = xor32Bits(firstBlock, P[15]);
-        secondBlock = xor32Bits(firstBlock, secondBlock);
         firstBlock = xor32Bits(firstBlock, P[17]);
         secondBlock = xor32Bits(secondBlock, P[16]);
         return new int[]{firstBlock, secondBlock};
     }
+
+    public static int[] round(int firstBlock, int secondBlock, int count) {
+        while (count >= 1 && count <= 15) {
+            firstBlock = xor32Bits(firstBlock, P[count]);
+            secondBlock = xor32Bits(F(firstBlock), secondBlock);
+            count++;
+        }
+        firstBlock = xor32Bits(firstBlock, P[15]);
+        secondBlock = xor32Bits(F(firstBlock), secondBlock);
+        firstBlock = xor32Bits(firstBlock, P[17]);
+        secondBlock = xor32Bits(secondBlock, P[16]);
+        return new int[]{firstBlock, secondBlock};
+    }
+
+    public static int[] backRound1(int firstBlock, int secondBlock, int count) {
+        if (count == 17) {
+            firstBlock = xor32Bits(firstBlock, P[17]);
+            secondBlock = xor32Bits(secondBlock, P[16]);
+            firstBlock = xor32Bits(firstBlock, P[15]);
+            secondBlock = xor32Bits(F(firstBlock), secondBlock);
+            count = 14;
+        }
+        if (count < 15 && count != 0) {
+            secondBlock = xor32Bits(secondBlock, P[14]);
+            firstBlock = xor32Bits(firstBlock, F(secondBlock));
+            count = count - 1;
+            backRound1(firstBlock, secondBlock, count);
+        }
+        if (count == 0) {
+            firstBlock = xor32Bits(firstBlock, P[0]);
+            secondBlock = xor32Bits(F(firstBlock), secondBlock);
+        }
+        return new int[]{firstBlock, secondBlock};
+    }
+
+    public static int[] round1(int firstBlock, int secondBlock, int count) {
+        if (count < 15) {
+            firstBlock = xor32Bits(firstBlock, P[count]);
+            secondBlock = xor32Bits(F(firstBlock), secondBlock);
+            count = count + 1;
+            round1(secondBlock, firstBlock, count);
+        }
+        firstBlock = xor32Bits(firstBlock, P[15]);
+        secondBlock = xor32Bits(F(firstBlock), secondBlock);
+        firstBlock = xor32Bits(firstBlock, P[17]);
+        secondBlock = xor32Bits(secondBlock, P[16]);
+        return new int[]{firstBlock, secondBlock};
+    }
+
+    public static int[][] generateSBox() {
+        int[][] S = new int[8][256];
+        // Генерация случайных значений для каждого элемента S-блока
+        Random random = new Random();
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 256; j++) {
+                S[i][j] = random.nextInt();
+            }
+        }
+        return S;
+    }
+
+    public static int F(int x) {
+        int a = (x >> 24) & 0xFF; // Получаем старший байт
+        int b = (x >> 16) & 0xFF; // Получаем второй байт
+        int c = (x >> 8) & 0xFF;  // Получаем третий байт
+        int d = x & 0xFF;         // Получаем младший байт
+        int result = (S[0][a] + S[1][b]) ^ S[2][c];
+        result = result + S[3][d];
+
+        return result;
+    }
+
+
+
+
 }
